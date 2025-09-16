@@ -1,0 +1,737 @@
+<!doctype html>
+<html lang="hi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Satyam Story — Slider + Gallery with Admin</title>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg:#0f1724; --card:#0b1220; --muted:#9aa6b2; --accent:#06b6d4; --glass: rgba(255,255,255,0.03); --radius:14px;
+      color-scheme: dark;
+    }
+    *{box-sizing:border-box}
+    body{font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, Arial; margin:0; background:linear-gradient(180deg,var(--bg) 0%, #071122 100%); color:#e6eef6; padding:28px}
+    .container{max-width:1100px;margin:0 auto}
+
+    header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+    header h1{font-size:20px;margin:0}
+    header p{margin:0;color:var(--muted);font-size:13px}
+
+    /* SLIDER */
+    .slider{position:relative;border-radius:14px;overflow:hidden;margin-bottom:20px;border:1px solid rgba(255,255,255,0.03);box-shadow:0 8px 30px rgba(2,6,23,0.6)}
+    .slides{display:flex;transition:transform .6s cubic-bezier(.2,.9,.2,1)}
+    .slide{min-width:100%;position:relative}
+    .slide img{width:100%;height:360px;object-fit:cover;display:block}
+    .slide .caption{position:absolute;left:24px;bottom:22px;background:linear-gradient(90deg, rgba(2,6,23,0.6), rgba(2,6,23,0.35));padding:12px 16px;border-radius:10px}
+    .caption h2{margin:0;font-size:18px}
+    .caption p{margin:6px 0 0;font-size:13px;color:var(--muted)}
+
+    .nav-arrow{position:absolute;top:50%;transform:translateY(-50%);background:rgba(0,0,0,0.45);border:none;padding:10px;border-radius:10px;color:#fff;cursor:pointer}
+    .nav-arrow.left{left:10px}
+    .nav-arrow.right{right:10px}
+
+    .dots{position:absolute;right:14px;bottom:14px;display:flex;gap:8px}
+    .dot{width:10px;height:10px;border-radius:50%;background:rgba(255,255,255,0.18);cursor:pointer}
+    .dot.active{background:var(--accent)}
+
+    /* controls & search */
+    .controls{display:flex;gap:12px;align-items:center;margin-bottom:12px}
+    .search{background:var(--glass);border:1px solid rgba(255,255,255,0.03);padding:10px 12px;border-radius:10px;min-width:220px}
+    .btn{background:linear-gradient(90deg,var(--accent),#38bdf8);border:none;padding:10px 14px;border-radius:10px;color:#062026;font-weight:600;cursor:pointer}
+
+    /* gallery */
+    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:18px}
+    .card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border-radius:var(--radius);overflow:hidden;box-shadow:0 6px 18px rgba(2,6,23,0.5);transition:transform .18s ease; border:1px solid rgba(255,255,255,0.03)}
+    .card:hover{transform:translateY(-6px)}
+    .thumb{position:relative;padding-top:56.25%; background:#081021}
+    .thumb img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+    .thumb-title{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent, rgba(0,0,0,0.8));padding:10px;font-size:13px;font-weight:600;text-align:center;color:white}
+    .meta{display:flex;flex-direction:column;padding:12px 14px;gap:8px}
+    .title{font-size:15px;font-weight:600}
+    .sub{font-size:12px;color:var(--muted)}
+    
+    /* New styles for ad/download buttons */
+    .actions{display:flex;gap:8px;align-items:center;margin-top:6px}
+    .action-btn {
+      flex: 1;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 8px 10px;
+      border-radius: 9px;
+      font-weight: 700;
+      text-decoration: none;
+      border: none;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .watch-ad-btn {
+      background: linear-gradient(90deg, #8b5cf6, #c084fc); /* Purple gradient */
+      color: #fff;
+    }
+    .download-btn {
+      background: linear-gradient(90deg, #0ea5a5, #06b6d4); /* Original teal gradient */
+      color: #012126;
+    }
+    .action-btn:disabled {
+      background: #4b5563; /* Grey background */
+      color: #9ca3af; /* Lighter grey text */
+      cursor: not-allowed;
+      opacity: 0.7;
+    }
+
+    .empty{padding:40px;text-align:center;border-radius:12px;background:linear-gradient(180deg, rgba(255,255,255,0.015), rgba(255,255,255,0.01));color:var(--muted)}
+
+    /* Admin panel */
+    .admin-btn{position:fixed;bottom:20px;right:20px;z-index:50;background:var(--accent);color:white;border:none;border-radius:50%;width:50px;height:50px;font-size:20px;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,0.3)}
+    .admin-panel{position:fixed;top:0;right:-400px;width:380px;height:100vh;background:var(--card);z-index:70;padding:20px;transition:right 0.3s ease;box-shadow:-5px 0 15px rgba(0,0,0,0.2);overflow-y:auto}
+    .admin-panel.open{right:0}
+    .admin-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:65;display:none}
+    .admin-overlay.open{display:block}
+    .admin-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;padding-bottom:10px;border-bottom:1px solid rgba(255,255,255,0.1)}
+    .admin-close{background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer}
+    .admin-form{display:flex;flex-direction:column;gap:15px}
+    .form-group{display:flex;flex-direction:column;gap:5px}
+    .form-group label{font-size:14px;font-weight:600}
+    .form-group input, .form-group textarea{background:var(--glass);border:1px solid rgba(255,255,255,0.05);padding:10px;border-radius:8px;color:white}
+    .admin-actions{display:flex;gap:10px;margin-top:10px}
+    .admin-submit{background:var(--accent);color:white;border:none;padding:10px 15px;border-radius:8px;cursor:pointer}
+    .admin-cancel{background:none;border:1px solid var(--muted);color:var(--muted);padding:10px 15px;border-radius:8px;cursor:pointer}
+    .item-list{margin-top:20px;border-top:1px solid rgba(255,255,255,0.1);padding-top:20px}
+    .item-list h3{margin-bottom:10px}
+    .admin-item{background:rgba(255,255,255,0.03);padding:10px;border-radius:8px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center}
+    .admin-item-actions{display:flex;gap:5px}
+    .admin-item-actions button{background:none;border:none;color:var(--muted);cursor:pointer}
+    
+    .admin-tabs{display:flex;border-bottom:1px solid rgba(255,255,255,0.1);margin-bottom:15px}
+    .admin-tab{padding:8px 15px;cursor:pointer;border-bottom:2px solid transparent}
+    .admin-tab.active{border-bottom-color:var(--accent);color:var(--accent)}
+    .tab-content{display:none}
+    .tab-content.active{display:block}
+
+    @media (max-width:520px){
+      body{padding:16px} 
+      .slide img{height:200px} 
+      header{flex-direction:column;align-items:flex-start;gap:10px} 
+      .controls{width:100%;justify-content:space-between} 
+      .search{flex:1}
+      .admin-panel{width:85%;right:-85%}
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div>
+        <h1>Satyam Story</h1>
+      </div>
+      <div class="controls">
+        <input class="search" id="q" placeholder="Search title..." />
+        <button class="btn" id="reset">Reset</button>
+      </div>
+    </header>
+
+    <!-- SLIDER -->
+    <section class="slider" id="slider" aria-label="Top slider">
+      <div class="slides" id="slides">
+        <!-- slides injected by JS -->
+      </div>
+      <button class="nav-arrow left" id="prev" aria-label="Previous">◀</button>
+      <button class="nav-arrow right" id="next" aria-label="Next">▶</button>
+      <div class="dots" id="dots"></div>
+    </section>
+
+    <!-- GALLERY -->
+    <main>
+      <section id="gallery" class="grid"></section>
+      <div id="nores" class="empty" style="display:none;margin-top:18px">Koi item nahi mila</div>
+    </main>
+  </div>
+
+  <!-- Admin button -->
+  <button class="admin-btn" id="admin-btn">⚙️</button>
+
+  <!-- Admin panel overlay -->
+  <div class="admin-overlay" id="admin-overlay"></div>
+
+  <!-- Admin panel -->
+  <div class="admin-panel" id="admin-panel">
+    <div class="admin-header">
+      <h2>Welcome maurya jee</h2> 
+      <button class="admin-close" id="admin-close">✕</button>
+    </div>
+    
+    <div class="admin-tabs">
+      <div class="admin-tab active" data-tab="gallery">Gallery</div>
+      <div class="admin-tab" data-tab="slider">Slider</div>
+    </div>
+    
+    <!-- Gallery Tab -->
+    <div class="tab-content active" id="gallery-tab">
+      <div class="admin-form">
+        <h3>Add New Item</h3>
+        <div class="form-group">
+          <label for="item-title">Title</label>
+          <input type="text" id="item-title" placeholder="Item title">
+        </div>
+        <div class="form-group">
+          <label for="item-subtitle">Subtitle</label>
+          <input type="text" id="item-subtitle" placeholder="Item subtitle">
+        </div>
+        <div class="form-group">
+          <label for="item-thumb">Thumbnail URL</label>
+          <input type="text" id="item-thumb" placeholder="Thumbnail image URL">
+        </div>
+        <div class="form-group">
+          <label for="item-file">File URL</label>
+          <input type="text" id="item-file" placeholder="Download file URL">
+        </div>
+        <div class="admin-actions">
+          <button class="admin-submit" id="admin-submit">Add Item</button>
+          <button class="admin-cancel" id="admin-cancel">Cancel</button>
+        </div>
+      </div>
+      
+      <div class="item-list">
+        <h3>Manage Gallery Items</h3>
+        <div id="admin-items-list">
+          <!-- Admin items will be listed here -->
+        </div>
+      </div>
+    </div>
+    
+    <!-- Slider Tab -->
+    <div class="tab-content" id="slider-tab">
+      <div class="admin-form">
+        <h3>Add New Slider Item</h3>
+        <div class="form-group">
+          <label for="slider-img">Image URL</label>
+          <input type="text" id="slider-img" placeholder="Slider image URL">
+        </div>
+        <div class="form-group">
+          <label for="slider-title">Title</label>
+          <input type="text" id="slider-title" placeholder="Slider title">
+        </div>
+        <div class="form-group">
+          <label for="slider-text">Text</label>
+          <input type="text" id="slider-text" placeholder="Slider text">
+        </div>
+        <div class="admin-actions">
+          <button class="admin-submit" id="slider-submit">Add Slider Item</button>
+          <button class="admin-cancel" id="slider-cancel">Cancel</button>
+        </div>
+      </div>
+      
+      <div class="item-list">
+        <h3>Manage Slider Items</h3>
+        <div id="admin-slider-list">
+          <!-- Slider items will be listed here -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Slider items - replace with your images and captions
+    let sliderItems = [
+      {id:1, img:'https://picsum.photos/id/1015/1200/700', title:'Satyam - Journey Begins', text:'Satyam ki pehli kahani: nayi shuruat'},
+      {id:2, img:'https://picsum.photos/id/1021/1200/700', title:'Satyam - Learning', text:'Seekhna aur aage badhna'},
+      {id:3, img:'https://picsum.photos/id/1035/1200/700', title:'Satyam - Celebration', text:'Choti choti jeet ka jashn'}
+    ];
+
+    // Gallery items
+    let items = [
+      {id:1,title:'Satyam Photo 1',sub:'Chapter 1',thumb:'https://picsum.photos/id/1015/800/450',file:'https://picsum.photos/id/1015/1200/800'},
+      {id:2,title:'Satyam Photo 2',sub:'Chapter 2',thumb:'https://picsum.photos/id/1025/800/450',file:'https://picsum.photos/id/1025/1200/800'},
+      {id:3,title:'Satyam Photo 3',sub:'Chapter 3',thumb:'https://picsum.photos/id/1020/800/450',file:'https://picsum.photos/id/1020/1200/800'},
+      {id:4,title:'Satyam Photo 4',sub:'Chapter 4',thumb:'https://picsum.photos/id/1003/800/450',file:'https://picsum.photos/id/1003/1200/800'},
+      {id:5,title:'Satyam Photo 5',sub:'Chapter 5',thumb:'https://picsum.photos/id/1011/800/450',file:'https://picsum.photos/id/1011/1200/800'},
+      {id:6,title:'Satyam Photo 6',sub:'Chapter 6',thumb:'https://picsum.photos/id/1016/800/450',file:'https://picsum.photos/id/1016/1200/800'}
+    ];
+
+    // Load data from localStorage if available
+    function loadData() {
+      const savedItems = localStorage.getItem('galleryItems');
+      const savedSlider = localStorage.getItem('sliderItems');
+      
+      if (savedItems) items = JSON.parse(savedItems);
+      if (savedSlider) sliderItems = JSON.parse(savedSlider);
+    }
+
+    // Save data to localStorage
+    function saveData() {
+      localStorage.setItem('galleryItems', JSON.stringify(items));
+      localStorage.setItem('sliderItems', JSON.stringify(sliderItems));
+    }
+
+    // --- SLIDER LOGIC ---
+    const slidesEl = document.getElementById('slides');
+    const dotsEl = document.getElementById('dots');
+    let current = 0; 
+    let autoplay = true; 
+    let autoTimer = null;
+
+    function renderSlider(){
+      slidesEl.innerHTML = '';
+      dotsEl.innerHTML = '';
+      sliderItems.forEach((s, idx)=>{
+        const slide = document.createElement('div'); 
+        slide.className='slide';
+        slide.innerHTML = `<img src="${s.img}" alt="${escapeHtml(s.title)}"><div class="caption"><h2>${escapeHtml(s.title)}</h2><p>${escapeHtml(s.text)}</p></div>`;
+        slidesEl.appendChild(slide);
+
+        const dot = document.createElement('div'); 
+        dot.className='dot'; 
+        if(idx===0) dot.classList.add('active'); 
+        dot.dataset.index = idx;
+        dot.addEventListener('click', ()=>{ goTo(idx); });
+        dotsEl.appendChild(dot);
+      });
+      updateSlider();
+    }
+
+    function updateSlider(){
+      slidesEl.style.transform = `translateX(-${current * 100}%)`;
+      dotsEl.querySelectorAll('.dot').forEach(d=>d.classList.remove('active'));
+      const active = dotsEl.querySelector(`.dot[data-index='${current}']`); 
+      if(active) active.classList.add('active');
+    }
+
+    function prev(){ current = (current - 1 + sliderItems.length) % sliderItems.length; updateSlider(); resetAuto(); }
+    function next(){ current = (current + 1) % sliderItems.length; updateSlider(); resetAuto(); }
+    function goTo(i){ current = i; updateSlider(); resetAuto(); }
+
+    document.getElementById('prev').addEventListener('click', prev);
+    document.getElementById('next').addEventListener('click', next);
+
+    function startAuto(){ if(!autoplay) return; autoTimer = setInterval(()=>{ current = (current+1) % sliderItems.length; updateSlider(); }, 2000); } // 2 सेकंड पर ऑटोप्ले
+    function stopAuto(){ if(autoTimer) clearInterval(autoTimer); }
+    function resetAuto(){ stopAuto(); startAuto(); }
+
+    // Pause on hover
+    document.getElementById('slider').addEventListener('mouseenter', ()=>{ stopAuto(); });
+    document.getElementById('slider').addEventListener('mouseleave', ()=>{ startAuto(); });
+
+    // --- GALLERY LOGIC ---
+    const gallery = document.getElementById('gallery');
+    const nores = document.getElementById('nores');
+    const AD_REQUIREMENT = 5; // डाउनलोड के लिए आवश्यक विज्ञापनों की संख्या
+
+    // लोकल स्टोरेज से विज्ञापन काउंट प्राप्त करें
+    function getAdCounts() {
+      const savedAdCounts = localStorage.getItem('adCounts');
+      return savedAdCounts ? JSON.parse(savedAdCounts) : {};
+    }
+
+    // लोकल स्टोरेज में विज्ञापन काउंट सेव करें
+    function setAdCounts(adCounts) {
+      localStorage.setItem('adCounts', JSON.stringify(adCounts));
+    }
+
+    // किसी आइटम के लिए विज्ञापन काउंट प्राप्त करें
+    function getAdCountForItem(itemId) {
+      const adCounts = getAdCounts();
+      return adCounts[itemId] || 0;
+    }
+
+    // किसी आइटम के लिए विज्ञापन काउंट बढ़ाएँ
+    function incrementAdCountForItem(itemId) {
+      const adCounts = getAdCounts();
+      adCounts[itemId] = (adCounts[itemId] || 0) + 1;
+      setAdCounts(adCounts);
+      return adCounts[itemId];
+    }
+
+    function render(list){
+      gallery.innerHTML = '';
+      if(!list.length){ 
+        nores.style.display='block'; 
+        return; 
+      }
+      nores.style.display='none';
+      for(const it of list){
+        const currentAdCount = getAdCountForItem(it.id);
+        const downloadEnabled = currentAdCount >= AD_REQUIREMENT;
+
+        const card = document.createElement('article'); 
+        card.className='card';
+        card.innerHTML = `
+          <div class="thumb">
+            <img loading="lazy" src="${it.thumb}" alt="${escapeHtml(it.title)}">
+            <div class="thumb-title">${escapeHtml(it.title)}</div>
+          </div>
+          <div class="meta">
+            <div class="sub">${escapeHtml(it.sub)}</div>
+            <div class="actions">
+              <button class="action-btn watch-ad-btn" data-id="${it.id}" ${downloadEnabled ? 'style="display:none;"' : ''}>
+                Ad Dekhen (${currentAdCount}/${AD_REQUIREMENT})
+              </button>
+              <a class="action-btn download-btn" 
+                 href="${downloadEnabled ? it.file : '#'}" 
+                 data-file="${it.file}" 
+                 data-id="${it.id}" 
+                 ${downloadEnabled ? '' : 'disabled'}
+                 ${downloadEnabled ? 'download' : ''}>
+                ⬇️ Download
+              </a>
+            </div>
+          </div>
+        `;
+        gallery.appendChild(card);
+      }
+      addGalleryEventListeners(); // कार्ड रेंडर होने के बाद इवेंट लिसनर जोड़ें
+    }
+
+    // गैलरी आइटम के लिए इवेंट लिसनर जोड़ें
+    function addGalleryEventListeners() {
+        document.querySelectorAll('.watch-ad-btn').forEach(button => {
+            button.onclick = (event) => {
+                const itemId = parseInt(event.target.dataset.id);
+                handleWatchAd(itemId, event.target);
+            };
+        });
+
+        document.querySelectorAll('.download-btn').forEach(button => {
+            button.onclick = (event) => {
+                event.preventDefault(); // डिफ़ॉल्ट लिंक व्यवहार को रोकें
+
+                const itemId = parseInt(event.target.dataset.id);
+                const downloadEnabled = getAdCountForItem(itemId) >= AD_REQUIREMENT;
+
+                if (downloadEnabled) {
+                    const fileUrl = event.target.dataset.file;
+                    handleDownload(itemId, fileUrl);
+                } else {
+                    alert(`कृपया डाउनलोड करने के लिए ${AD_REQUIREMENT} विज्ञापन देखें। आपने ${getAdCountForItem(itemId)}/${AD_REQUIREMENT} विज्ञापन देखे हैं।`);
+                }
+            };
+        });
+    }
+
+    // विज्ञापन देखने को हैंडल करें
+    function handleWatchAd(itemId, buttonElement) {
+      alert('विज्ञापन चल रहा है... (यह एक सिमुलेशन है)'); // विज्ञापन सिमुलेशन
+      
+      const newAdCount = incrementAdCountForItem(itemId);
+      buttonElement.textContent = `Ad Dekhen (${newAdCount}/${AD_REQUIREMENT})`;
+
+      if (newAdCount >= AD_REQUIREMENT) {
+        buttonElement.style.display = 'none'; // 'Ad Dekhen' बटन छुपाएं
+        const downloadButton = document.querySelector(`.download-btn[data-id="${itemId}"]`);
+        if (downloadButton) {
+          downloadButton.disabled = false;
+          downloadButton.href = downloadButton.dataset.file; // वास्तविक फाइल लिंक सेट करें
+          downloadButton.removeAttribute('disabled'); // 'disabled' विशेषता हटाएँ
+          alert('डाउनलोड अनलॉक हो गया है! अब आप फाइल डाउनलोड कर सकते हैं।');
+        }
+      }
+    }
+
+    // डाउनलोड को हैंडल करें
+    function handleDownload(itemId, fileUrl) {
+      // यह URL को एक नए टैब में खोलेगा, जो डाउनलोड को ट्रिगर कर सकता है।
+      // यदि आप सीधे डाउनलोड शुरू करना चाहते हैं, तो 'download' एट्रीब्यूट वाला 'a' टैग काफी है।
+      window.open(fileUrl, '_blank'); 
+    }
+
+    // Search functionality
+    document.getElementById('q').addEventListener('input',(e)=>{
+      const q = e.target.value.trim().toLowerCase();
+      const filtered = items.filter(i=> i.title.toLowerCase().includes(q) || i.sub.toLowerCase().includes(q));
+      render(filtered);
+    });
+    document.getElementById('reset').addEventListener('click',()=>{ document.getElementById('q').value=''; render(items);});
+
+    // --- ADMIN PANEL LOGIC ---
+    const adminBtn = document.getElementById('admin-btn');
+    const adminPanel = document.getElementById('admin-panel');
+    const adminOverlay = document.getElementById('admin-overlay');
+    const adminClose = document.getElementById('admin-close');
+    const adminSubmit = document.getElementById('admin-submit');
+    const adminCancel = document.getElementById('admin-cancel');
+    const adminItemsList = document.getElementById('admin-items-list');
+    const adminTabs = document.querySelectorAll('.admin-tab');
+    const tabContents = document.querySelectorAll('.tab-content');
+    const sliderSubmit = document.getElementById('slider-submit');
+    const sliderCancel = document.getElementById('slider-cancel');
+    const adminSliderList = document.getElementById('admin-slider-list');
+
+    // Tab switching
+    adminTabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        const tabId = tab.dataset.tab;
+        
+        // Update active tab
+        adminTabs.forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        
+        // Show corresponding content
+        tabContents.forEach(content => {
+          content.classList.remove('active');
+          if (content.id === `${tabId}-tab`) {
+            content.classList.add('active');
+          }
+        });
+      });
+    });
+
+    // Admin Panel Password Protection
+    const ADMIN_PASSWORD = 'vivek2009'; // आपका पासवर्ड
+
+    function handleAdminPanelOpen() {
+      // प्रॉम्प्ट टेक्स्ट को "Welcome maurya jee" में बदला गया है
+      const password = prompt('Welcome maurya jee'); 
+      if (password === ADMIN_PASSWORD) {
+        adminPanel.classList.add('open');
+        adminOverlay.classList.add('open');
+        renderAdminItems();
+        renderAdminSliderItems();
+      } else if (password !== null) { 
+        alert('गलत पासवर्ड! एडमिन पैनल नहीं खुलेगा।');
+      }
+    }
+
+    adminBtn.addEventListener('click', handleAdminPanelOpen); 
+
+    adminClose.addEventListener('click', closeAdminPanel);
+    adminOverlay.addEventListener('click', closeAdminPanel);
+    adminCancel.addEventListener('click', closeAdminPanel);
+    sliderCancel.addEventListener('click', closeAdminPanel);
+
+    function closeAdminPanel() {
+      adminPanel.classList.remove('open');
+      adminOverlay.classList.remove('open');
+      // Reset forms and submit buttons
+      document.getElementById('item-title').value = '';
+      document.getElementById('item-subtitle').value = '';
+      document.getElementById('item-thumb').value = '';
+      document.getElementById('item-file').value = '';
+      document.getElementById('slider-img').value = '';
+      document.getElementById('slider-title').value = '';
+      document.getElementById('slider-text').value = '';
+      adminSubmit.textContent = 'Add Item';
+      adminSubmit.onclick = addItemHandler;
+      sliderSubmit.textContent = 'Add Slider Item';
+      sliderSubmit.onclick = addSliderItemHandler;
+    }
+
+    function addItemHandler() {
+      const title = document.getElementById('item-title').value;
+      const subtitle = document.getElementById('item-subtitle').value;
+      const thumb = document.getElementById('item-thumb').value;
+      const file = document.getElementById('item-file').value;
+      
+      if (title && subtitle && thumb && file) {
+        const newId = items.length > 0 ? Math.max(...items.map(i => i.id)) + 1 : 1;
+        items.push({
+          id: newId,
+          title: title,
+          sub: subtitle,
+          thumb: thumb,
+          file: file
+        });
+        
+        saveData();
+        render(items);
+        renderAdminItems();
+        
+        // Clear form
+        document.getElementById('item-title').value = '';
+        document.getElementById('item-subtitle').value = '';
+        document.getElementById('item-thumb').value = '';
+        document.getElementById('item-file').value = '';
+      } else {
+        alert('कृपया सभी फ़ील्ड भरें');
+      }
+    }
+
+    adminSubmit.addEventListener('click', addItemHandler);
+
+    function addSliderItemHandler() {
+      const img = document.getElementById('slider-img').value;
+      const title = document.getElementById('slider-title').value;
+      const text = document.getElementById('slider-text').value;
+      
+      if (img && title && text) {
+        const newId = sliderItems.length > 0 ? Math.max(...sliderItems.map(s => s.id)) + 1 : 1;
+        sliderItems.push({
+          id: newId,
+          img: img,
+          title: title,
+          text: text
+        });
+        
+        saveData();
+        renderSlider();
+        renderAdminSliderItems();
+        
+        // Clear form
+        document.getElementById('slider-img').value = '';
+        document.getElementById('slider-title').value = '';
+        document.getElementById('slider-text').value = '';
+      } else {
+        alert('कृपया सभी फ़ील्ड भरें');
+      }
+    }
+
+    sliderSubmit.addEventListener('click', addSliderItemHandler);
+
+    function renderAdminItems() {
+      adminItemsList.innerHTML = '';
+      items.forEach(item => {
+        const itemEl = document.createElement('div');
+        itemEl.className = 'admin-item';
+        itemEl.innerHTML = `
+          <div>
+            <strong>${escapeHtml(item.title)}</strong>
+            <div style="font-size:12px;color:var(--muted)">${escapeHtml(item.sub)}</div>
+          </div>
+          <div class="admin-item-actions">
+            <button class="edit-item" data-id="${item.id}">✏️</button>
+            <button class="delete-item" data-id="${item.id}">🗑️</button>
+          </div>
+        `;
+        adminItemsList.appendChild(itemEl);
+      });
+      
+      // Add event listeners for edit and delete buttons
+      document.querySelectorAll('.edit-item').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const id = +e.target.closest('button').dataset.id;
+          editItem(id);
+        });
+      });
+      
+      document.querySelectorAll('.delete-item').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const id = +e.target.closest('button').dataset.id;
+          deleteItem(id);
+        });
+      });
+    }
+
+    function renderAdminSliderItems() {
+      adminSliderList.innerHTML = '';
+      sliderItems.forEach(item => {
+        const itemEl = document.createElement('div');
+        itemEl.className = 'admin-item';
+        itemEl.innerHTML = `
+          <div>
+            <strong>${escapeHtml(item.title)}</strong>
+            <div style="font-size:12px;color:var(--muted)">${escapeHtml(item.text)}</div>
+          </div>
+          <div class="admin-item-actions">
+            <button class="edit-slider-item" data-id="${item.id}">✏️</button>
+            <button class="delete-slider-item" data-id="${item.id}">🗑️</button>
+          </div>
+        `;
+        adminSliderList.appendChild(itemEl);
+      });
+      
+      // Add event listeners for edit and delete buttons
+      document.querySelectorAll('.edit-slider-item').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const id = +e.target.closest('button').dataset.id;
+          editSliderItem(id);
+        });
+      });
+      
+      document.querySelectorAll('.delete-slider-item').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const id = +e.target.closest('button').dataset.id;
+          deleteSliderItem(id);
+        });
+      });
+    }
+
+    function editItem(id) {
+      const item = items.find(i => i.id === id);
+      if (!item) return;
+      
+      document.getElementById('item-title').value = item.title;
+      document.getElementById('item-subtitle').value = item.sub;
+      document.getElementById('item-thumb').value = item.thumb;
+      document.getElementById('item-file').value = item.file;
+      
+      // Change submit button to update
+      adminSubmit.textContent = 'Update Item';
+      adminSubmit.onclick = () => {
+        item.title = document.getElementById('item-title').value;
+        item.sub = document.getElementById('item-subtitle').value;
+        item.thumb = document.getElementById('item-thumb').value;
+        item.file = document.getElementById('item-file').value;
+        
+        saveData();
+        render(items);
+        renderAdminItems();
+        
+        // Reset form and button
+        document.getElementById('item-title').value = '';
+        document.getElementById('item-subtitle').value = '';
+        document.getElementById('item-thumb').value = '';
+        document.getElementById('item-file').value = '';
+        adminSubmit.textContent = 'Add Item';
+        adminSubmit.onclick = addItemHandler;
+      };
+    }
+
+    function editSliderItem(id) {
+      const item = sliderItems.find(i => i.id === id);
+      if (!item) return;
+      
+      document.getElementById('slider-img').value = item.img;
+      document.getElementById('slider-title').value = item.title;
+      document.getElementById('slider-text').value = item.text;
+      
+      // Change submit button to update
+      sliderSubmit.textContent = 'Update Slider Item';
+      sliderSubmit.onclick = () => {
+        item.img = document.getElementById('slider-img').value;
+        item.title = document.getElementById('slider-title').value;
+        item.text = document.getElementById('slider-text').value;
+        
+        saveData();
+        renderSlider();
+        renderAdminSliderItems();
+        
+        // Reset form and button
+        document.getElementById('slider-img').value = '';
+        document.getElementById('slider-title').value = '';
+        document.getElementById('slider-text').value = '';
+        sliderSubmit.textContent = 'Add Slider Item';
+        sliderSubmit.onclick = addSliderItemHandler;
+      };
+    }
+
+    function deleteItem(id) {
+      if (confirm('क्या आप वाकई इस आइटम को हटाना चाहते हैं?')) { 
+        items = items.filter(i => i.id !== id);
+        saveData();
+        render(items); // गैलरी को अपडेट करें
+        renderAdminItems();
+      }
+    }
+
+    function deleteSliderItem(id) {
+      if (confirm('क्या आप वाकई इस स्लाइडर आइटम को हटाना चाहते हैं?')) { 
+        sliderItems = sliderItems.filter(i => i.id !== id);
+        saveData();
+        renderSlider(); // स्लाइडर को अपडेट करें
+        renderAdminSliderItems();
+      }
+    }
+
+    // Initialize
+    loadData();
+    renderSlider(); 
+    startAuto();
+    render(items);
+
+    // tiny helper
+    function escapeHtml(s){return String(s).replace(/[&<>"']/g,function(m){return{'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[m]})}
+  </script>
+</body>
+</html>
